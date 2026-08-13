@@ -1,0 +1,84 @@
+# Enforces own-overview's dependency rule: the core (contracts/ports + the
+# framework-free domain logic) never depends on adapters, the composition root,
+# or heavy libraries. Adapters depend on the core, not the other way round.
+#
+# Run with `lint-imports` (pip install import-linter). Wired into /verify, CI,
+# and the pre-commit hook. include_external_packages is required so the purity
+# contracts can forbid EXTERNAL packages (langgraph, boto3, ...).
+
+[importlinter]
+include_external_packages = True
+# Type-only imports (under `if TYPE_CHECKING:`) don't create a runtime
+# dependency, so they don't count against the boundaries — a node may name the
+# `Settings` type without importing the composition root at runtime.
+exclude_type_checking_imports = True
+root_packages =
+    own_overview
+
+[importlinter:contract:contracts-pure-leaf]
+name = contracts.py is a pure leaf (types + Protocols only, no internal deps, no frameworks)
+type = forbidden
+source_modules =
+    own_overview.contracts
+forbidden_modules =
+    own_overview.config
+    own_overview.pipeline
+    own_overview.ingestion
+    own_overview.embeddings
+    own_overview.llm
+    own_overview.vectorstore
+    own_overview.retrieval
+    own_overview.grounding
+    own_overview.evals
+    own_overview.security
+    own_overview.audit
+    langgraph
+    langchain
+    langchain_core
+    boto3
+    botocore
+    opensearchpy
+    pyarrow
+    sentence_transformers
+    numpy
+
+[importlinter:contract:core-purity]
+name = Domain logic (security, grounding, evals) is framework-, adapter- and composition-root-free
+type = forbidden
+source_modules =
+    own_overview.security
+    own_overview.grounding
+    own_overview.evals
+forbidden_modules =
+    own_overview.config
+    own_overview.embeddings
+    own_overview.llm
+    own_overview.vectorstore
+    own_overview.retrieval
+    own_overview.pipeline
+    own_overview.ingestion
+    langgraph
+    langchain
+    langchain_core
+    boto3
+    botocore
+    opensearchpy
+    pyarrow
+    sentence_transformers
+    numpy
+
+[importlinter:contract:nodes-depend-on-ports]
+name = Pipeline nodes depend on ports (contracts), never concrete adapters or the composition root
+type = forbidden
+source_modules =
+    own_overview.pipeline.nodes
+forbidden_modules =
+    own_overview.config
+    own_overview.embeddings
+    own_overview.llm
+    own_overview.vectorstore
+    own_overview.retrieval
+    own_overview.ingestion
+    boto3
+    botocore
+    opensearchpy

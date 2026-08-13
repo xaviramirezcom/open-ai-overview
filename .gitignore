@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# data (generated)
+sample_data/cda/
+*.parquet
+!sample_data/seed/**/*.parquet
+
+# tooling
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+
+# terraform
+infra/terraform/.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# localstack
+infra/localstack/volume/
+
+# local vector store (pickle)
+.own_overview/
+
+# runtime audit log
+audit.log
+
+# coverage
+.coverage
+htmlcov/

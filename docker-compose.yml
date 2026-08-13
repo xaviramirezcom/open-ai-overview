@@ -1,0 +1,35 @@
+# Offline stack for own-overview: emulated AWS (S3 + EventBridge + Lambda) via
+# LocalStack, plus a single-node OpenSearch for the vector index.
+#
+#   docker compose up -d
+#   ./scripts/bootstrap_localstack.sh   # create bucket, event bus, deploy lambda
+#   own-overview seed                   # generate + push synthetic CDA data
+#   own-overview query "why did premium POL-55012 change?" --role adjuster
+#
+# For the fully local, no-container run see the README "Local (zero cloud)".
+
+services:
+  localstack:
+    image: localstack/localstack:3.5
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3,events,lambda,iam,sts,logs
+      - DEBUG=0
+      - LAMBDA_EXECUTOR=docker
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "./infra/localstack/volume:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  opensearch:
+    image: opensearchproject/opensearch:2.15.0
+    environment:
+      - discovery.type=single-node
+      - plugins.security.disabled=true
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - "DISABLE_INSTALL_DEMO_CONFIG=true"
+    ports:
+      - "9200:9200"
+    ulimits:
+      memlock: { soft: -1, hard: -1 }

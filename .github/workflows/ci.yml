@@ -1,0 +1,40 @@
+name: CI
+
+# Ground truth for code quality and test integrity. Runs the full gate on the
+# code exactly as committed. Local hooks make cheating hard; this makes it
+# visible: the green/red check is what a reviewer sees on the PR.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  quality:
+    name: Quality gate (ruff · mypy · import-linter · pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv pip install --system -e '.[local,dev]'
+
+      - name: Lint (ruff)
+        run: ruff check . && ruff format --check .
+
+      - name: Type check (mypy)
+        run: mypy own_overview
+
+      - name: Architecture boundaries (import-linter)
+        run: lint-imports
+
+      - name: Tests + coverage floor
+        # --cov-fail-under enforces the coverage minimum. Lowering it shows up
+        # in the diff and in this file's history.
+        run: pytest --cov=own_overview --cov-report=term-missing --cov-fail-under=85

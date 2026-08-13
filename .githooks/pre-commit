@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Local pre-commit gate for own-overview. Fast subset (lint, format, arch,
+# tests) so a broken or test-weakening change can't enter history. The full
+# gate — incl. mypy — runs in CI (.github/workflows/ci.yml).
+#
+# Enable once per clone:   git config core.hooksPath .githooks
+
+set -uo pipefail
+fail=0
+cd "$(git rev-parse --show-toplevel)" || exit 1
+if [ -d .venv/bin ]; then PATH="$PWD/.venv/bin:$PATH"; export PATH; fi
+
+changed() { git diff --cached --name-only --diff-filter=ACM; }
+
+if changed | grep -qE '\.py$'; then
+  echo "▶ python checks…"
+  ( ruff check . \
+    && ruff format --check . \
+    && lint-imports \
+    && pytest -q --cov=own_overview --cov-fail-under=85 ) || fail=1
+fi
+
+# Refuse to commit staged tests that are skipped or focused.
+if changed | grep -qE '(test_.*\.py|_test\.py)'; then
+  if git diff --cached | grep -qE '^\+.*(@pytest\.mark\.skip|pytest\.skip\(|@pytest\.mark\.xfail|xfail\()'; then
+    echo "✖ commit blocked: staged tests contain skip/xfail markers."
+    fail=1
+  fi
+fi
+
+if [ "$fail" -ne 0 ]; then
+  echo "✖ pre-commit checks failed — commit aborted."
+  exit 1
+fi
+echo "✓ pre-commit checks passed."
+exit 0
