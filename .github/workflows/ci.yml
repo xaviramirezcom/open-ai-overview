@@ -16,14 +16,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-      - name: Set up Python
-        run: uv python install 3.11
-
-      - name: Install dependencies
-        run: uv pip install --system -e '.[local,dev]'
+      - name: Install
+        # Core deps + dev tools + numpy (the local vector store needs it). We
+        # skip the heavy `local` extra (sentence-transformers/torch): the test
+        # suite uses the zero-dependency `hash` embedder, so CI stays fast.
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[dev]' numpy
 
       - name: Lint (ruff)
         run: ruff check . && ruff format --check .
